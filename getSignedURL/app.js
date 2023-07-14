@@ -18,6 +18,7 @@
 const AWS = require('aws-sdk')
 AWS.config.update({ region: process.env.AWS_REGION })
 const s3 = new AWS.S3()
+const TOKEN = "3e7cab40f25591dc4a9e58607e5cd8e73d665fd400aebbb189984926eae0e3a5"
 
 // Change this value to adjust the signed URL's expiration
 const URL_EXPIRATION_SECONDS = 300
@@ -28,20 +29,34 @@ exports.handler = async (event) => {
 }
 
 const getUploadURL = async function(event) {
+  const d = new Date();
+  const prefix = 
+    d.getUTCFullYear().toString() + 
+    d.getUTCMonth().toString().padStart(2, '0') + 
+    d.getUTCDay().toString().padStart(2, '0') + '_' +
+    d.getUTCHours().toString().padStart(2, '0') +
+    d.getUTCMinutes().toString().padStart(2, '0') +
+    d.getUTCSeconds().toString().padStart(2, '0')
   const randomID = parseInt(Math.random() * 10000000)
-  const Key = `${randomID}.jpg`
+  const Key = `${prefix}_${randomID}.zip`
+
+  if (!event.queryStringParameters || (event.queryStringParameters.token != TOKEN)) {
+    let response = {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'invalid request' }),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+    };
+    return response;
+  }
 
   // Get signed URL from S3
   const s3Params = {
     Bucket: process.env.UploadBucket,
     Key,
     Expires: URL_EXPIRATION_SECONDS,
-    ContentType: 'image/jpeg',
-
-    // This ACL makes the uploaded object publicly readable. You must also uncomment
-    // the extra permission for the Lambda function in the SAM template.
-
-    // ACL: 'public-read'
+    ContentType: 'application/octet-stream',
   }
 
   console.log('Params: ', s3Params)
