@@ -32,8 +32,8 @@ const getUploadURL = async function(event) {
   const d = new Date();
   const prefix = 
     d.getUTCFullYear().toString() + 
-    d.getUTCMonth().toString().padStart(2, '0') + 
-    d.getUTCDay().toString().padStart(2, '0') + '_' +
+    (d.getUTCMonth() + 1).toString().padStart(2, '0') + 
+    d.getUTCDate().toString().padStart(2, '0') + '_' +
     d.getUTCHours().toString().padStart(2, '0') +
     d.getUTCMinutes().toString().padStart(2, '0') +
     d.getUTCSeconds().toString().padStart(2, '0')
