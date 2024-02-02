@@ -13,32 +13,30 @@
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-'use strict'
+// Import only the required packages from AWS SDK v3
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const AWS = require('aws-sdk')
-AWS.config.update({ region: process.env.AWS_REGION })
-const s3 = new AWS.S3()
-const TOKEN = "3e7cab40f25591dc4a9e58607e5cd8e73d665fd400aebbb189984926eae0e3a5"
+// Initialize S3 client with the region
+const s3Client = new S3Client({ region: process.env.AWS_REGION });
+
+const TOKEN = "3e7cab40f25591dc4a9e58607e5cd8e73d665fd400aebbb189984926eae0e3a5";
 
 // Change this value to adjust the signed URL's expiration
-const URL_EXPIRATION_SECONDS = 300
+const URL_EXPIRATION_SECONDS = 300;
 
 // Main Lambda entry point
-exports.handler = async (event) => {
-  return await getUploadURL(event)
-}
-
-const getUploadURL = async function(event) {
+export async function handler(event, context) {
   const d = new Date();
-  const prefix = 
+  const key_prefix = 
     d.getUTCFullYear().toString() + 
     (d.getUTCMonth() + 1).toString().padStart(2, '0') + 
     d.getUTCDate().toString().padStart(2, '0') + '_' +
     d.getUTCHours().toString().padStart(2, '0') +
     d.getUTCMinutes().toString().padStart(2, '0') +
-    d.getUTCSeconds().toString().padStart(2, '0')
-  const randomID = parseInt(Math.random() * 10000000)
-  const Key = `${prefix}_${randomID}.zip`
+    d.getUTCSeconds().toString().padStart(2, '0');
+  const key_randomID = parseInt(Math.random() * 10000000);
+  const Key = `${key_prefix}_${key_randomID}.zip`;
 
   if (!event.queryStringParameters || (event.queryStringParameters.token != TOKEN)) {
     let response = {
@@ -55,15 +53,15 @@ const getUploadURL = async function(event) {
   const s3Params = {
     Bucket: process.env.UploadBucket,
     Key,
-    Expires: URL_EXPIRATION_SECONDS,
     ContentType: 'application/octet-stream',
-  }
+  };
 
-  console.log('Params: ', s3Params)
-  const uploadURL = await s3.getSignedUrlPromise('putObject', s3Params)
+  console.log('Params: ', s3Params);
+  const command = new PutObjectCommand(s3Params);
+  const uploadURL = await getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRATION_SECONDS });
 
   return JSON.stringify({
     uploadURL: uploadURL,
     Key
-  })
-}
+  });
+};
